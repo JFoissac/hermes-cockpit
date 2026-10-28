@@ -1,0 +1,164 @@
+/* Bandeau d'état des trois agents Ultracode.
+   Complète theme.css : uniquement des tokens (--glass, --line, --ink, --muted,
+   --ok, --warn, --err), aucune couleur en dur. Pastilles compactes arrondies. */
+
+.ultra-roster {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 5px 8px;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--glass);
+  backdrop-filter: blur(12px) saturate(120%);
+  min-width: 0;
+}
+
+.ultra-roster__item {
+  display: flex;
+  min-width: 0;
+}
+
+/* ── Pastille ───────────────────────────────────────────────────────── */
+.ultra-roster__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  max-width: 220px;
+  padding: 3px 9px 3px 3px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--frame-bg);
+  color: var(--ink);
+  text-align: left;
+  transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
+
+  /* Apparition en fondu + translation, décalée par agent. */
+  animation: ultra-roster-in 220ms ease-out both;
+  animation-delay: calc(var(--ultra-i, 0) * 55ms);
+}
+
+.ultra-roster__chip:hover {
+  border-color: var(--muted-2);
+  background: var(--hover);
+}
+.ultra-roster__chip:active {
+  transform: translateY(1px);
+}
+.ultra-roster__chip:focus-visible {
+  outline: 2px solid var(--info);
+  outline-offset: 2px;
+}
+
+/* Liseré de teinte selon l'état : repère immédiat sans lire le point. */
+.ultra-roster__chip[data-state="running"] { border-color: var(--warn-line); }
+.ultra-roster__chip[data-state="done"] { border-color: var(--ok-line); }
+.ultra-roster__chip[data-state="error"] { border-color: var(--err-line); }
+
+.ultra-roster__glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--well);
+  border: 1px solid var(--line-soft);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  line-height: 1;
+  color: var(--muted);
+}
+
+.ultra-roster__body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+}
+
+.ultra-roster__label {
+  font-size: 11.5px;
+  line-height: 1.15;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ultra-roster__detail {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  line-height: 1.15;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Point d'état ───────────────────────────────────────────────────── */
+.ultra-roster__dot {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--muted-2);
+}
+
+.ultra-roster__dot[data-state="running"] {
+  background: var(--warn);
+  animation: ultra-roster-pulse 1.4s ease-in-out infinite;
+}
+
+.ultra-roster__dot[data-state="done"] {
+  background: var(--ok);
+  box-shadow: 0 0 0 3px var(--ok-glow);
+}
+
+.ultra-roster__dot[data-state="error"] {
+  background: var(--err);
+  box-shadow: 0 0 0 3px var(--err-bg);
+}
+
+@keyframes ultra-roster-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Pulsation sobre : opacité + halo, pas de mise à l'échelle du texte. */
+@keyframes ultra-roster-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 var(--warn-line);
+  }
+  50% {
+    opacity: 0.55;
+    box-shadow: 0 0 0 3px var(--warn-line);
+  }
+}
+
+/* Mouvement réduit : plus de pulsation ni de cascade, l'état reste lisible
+   grâce à la couleur du point et au liseré de la pastille. */
+@media (prefers-reduced-motion: reduce) {
+  .ultra-roster__chip,
+  .ultra-roster__dot[data-state="running"] {
+    animation: none !important;
+    transition: none !important;
+  }
+  .ultra-roster__dot[data-state="running"] {
+    opacity: 1;
+    box-shadow: 0 0 0 3px var(--warn-line);
+  }
+}

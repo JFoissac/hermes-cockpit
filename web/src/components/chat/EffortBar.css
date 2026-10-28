@@ -1,0 +1,247 @@
+/* EffortBar — curseur de niveau d'effort du composer.
+ *
+ * Variables du thème uniquement (styles/theme.css) : l'encre, les lignes et
+ * les surfaces viennent de --ink / --line / --frame-bg, et les deux
+ * extrémités du dégradé dérivent de --info via color-mix. Rien n'est codé en
+ * dur en dehors de la teinte violette, absente de la palette.
+ */
+
+.effort {
+  /* Demi-curseur : la marge qui empêche le thumb de dépasser de la piste. */
+  --effort-pad: 7px;
+  --effort-track-h: 14px;
+  --effort-knob: var(--surface, var(--frame-bg, #ffffff));
+  --effort-knob-ring: color-mix(in srgb, var(--effort-to) 62%, var(--ink));
+  --effort-from: var(--info, #2f5d8a);
+  --effort-to: color-mix(in srgb, var(--info, #2f5d8a) 34%, #8b5cf6);
+  --effort-empty: var(--line, #e5e5e2);
+
+  display: grid;
+  gap: 5px;
+  width: 100%;
+  min-width: 180px;
+  font-family: var(--font-ui);
+  color: var(--ink);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Sur fond sombre les teintes de --info sont déjà claires : on les pousse
+   vers le pastel pour que le dégradé reste lisible sans brûler l'œil. */
+[data-theme="dark"] .effort {
+  --effort-knob: #f1f6f8;
+  /* Sur le dégradé pastel du thème sombre, un anneau clair disparaîtrait :
+     le curseur est cerclé de la couleur de fond, en négatif du remplissage. */
+  --effort-knob-ring: color-mix(in srgb, var(--bg, #0e1113) 82%, transparent);
+  --effort-from: color-mix(in srgb, var(--info, #7fb0d8) 78%, #ffffff);
+  --effort-to: color-mix(in srgb, var(--info, #7fb0d8) 26%, #b8a4ff);
+  --effort-empty: var(--line, #242b30);
+}
+
+/* ── Petit texte au-dessus ─────────────────────────────────────────────── */
+.effort__meta {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.effort__eyebrow {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta, 9.5px);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.effort__hint {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+  font-size: var(--fs-meta, 10px);
+  color: var(--muted);
+}
+
+/* ── Ligne : libellé courant à gauche, piste à droite ──────────────────── */
+.effort__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.effort__label {
+  flex: 0 0 auto;
+  /* Largeur réservée : le libellé ne fait plus danser la piste quand il
+     change de longueur (Rapide → Approfondi). */
+  min-width: 5.75em;
+  font-size: var(--fs-ui, 12.5px);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+/* ── Zone interactive (rôle slider) ────────────────────────────────────── */
+.effort__rail {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 28px;
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  padding: 4px 0;
+  border-radius: 8px;
+  cursor: pointer;
+  outline: none;
+  touch-action: none; /* le glissement ne fait pas défiler la page */
+  -webkit-tap-highlight-color: transparent;
+}
+
+.effort__rail:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--info, #2f5d8a) 62%, transparent);
+  outline-offset: 2px;
+}
+
+/* ── Piste creusée ─────────────────────────────────────────────────────── */
+.effort__track {
+  position: relative;
+  height: var(--effort-track-h);
+  margin: 0 var(--effort-pad);
+  border-radius: 999px;
+  /* La piste entière porte le dégradé en sourdine : la barre se lit comme une
+     barre colorée, et le remplissage plein marque le niveau atteint. */
+  background-color: color-mix(in srgb, var(--effort-empty) 78%, var(--ink));
+  background-image: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--effort-from) 30%, transparent),
+    color-mix(in srgb, var(--effort-to) 30%, transparent)
+  );
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.07);
+}
+
+[data-theme="dark"] .effort__track {
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.55);
+}
+
+/* ── Remplissage en dégradé bleu → violet ──────────────────────────────── */
+.effort__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--effort-ratio, 0) * 100%);
+  border-radius: 999px;
+  background-image: linear-gradient(
+    90deg,
+    var(--effort-from),
+    var(--effort-to),
+    var(--effort-from)
+  );
+  background-size: 200% 100%;
+  background-position: 0% 50%;
+  /* Halo discret : le remplissage se voit sans hurler. */
+  box-shadow: 0 0 10px color-mix(in srgb, var(--effort-to) 45%, transparent);
+  transition: width 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── Curseur ───────────────────────────────────────────────────────────── */
+.effort__thumb {
+  position: absolute;
+  top: 50%;
+  left: calc(var(--effort-ratio, 0) * 100%);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--effort-knob);
+  border: 2px solid var(--effort-knob-ring);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
+  transform: translate(-50%, -50%);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+  will-change: transform;
+}
+
+.effort__rail:hover .effort__thumb {
+  transform: translate(-50%, -50%) scale(1.06);
+}
+
+.effort__rail[data-dragging="true"] .effort__thumb {
+  transform: translate(-50%, -50%) scale(1.14);
+}
+
+/* ── Les 5 crans, sous la piste, alignés sur les positions du curseur ──── */
+.effort__ticks {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 4px;
+  margin: 0 calc(var(--effort-pad) - 1px);
+}
+
+.effort__notch {
+  width: 2px;
+  height: 3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink) 22%, transparent);
+  transition: background 140ms ease, height 140ms ease;
+}
+
+.effort__notch[data-on="true"] {
+  height: 4px;
+  background: color-mix(in srgb, var(--effort-to) 72%, var(--ink));
+}
+
+/* ── Animations : uniquement pendant le travail de l'agent ─────────────── */
+@keyframes effort-flow {
+  from {
+    background-position: 0% 50%;
+  }
+  to {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes effort-pulse {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28),
+      0 0 0 0 color-mix(in srgb, var(--effort-to) 55%, transparent);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28),
+      0 0 0 5px color-mix(in srgb, var(--effort-to) 0%, transparent);
+  }
+}
+
+.effort[data-busy="true"] .effort__fill {
+  animation: effort-flow 2.4s linear infinite alternate;
+}
+
+.effort[data-busy="true"] .effort__thumb {
+  animation: effort-pulse 1.5s ease-in-out infinite;
+}
+
+/* Au repos : aucune animation, seulement les transitions d'état. */
+@media (prefers-reduced-motion: reduce) {
+  .effort[data-busy="true"] .effort__fill,
+  .effort[data-busy="true"] .effort__thumb {
+    animation: none;
+  }
+
+  .effort__fill,
+  .effort__thumb,
+  .effort__notch {
+    transition: none;
+  }
+
+  .effort__rail:hover .effort__thumb,
+  .effort__rail[data-dragging="true"] .effort__thumb {
+    transform: translate(-50%, -50%);
+  }
+}

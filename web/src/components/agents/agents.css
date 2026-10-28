@@ -1,0 +1,351 @@
+/* Vue Agents — cartes de sessions, onglets d'origine, arbre des sous-agents.
+   Complète theme.css : réutilise les tokens et les classes .badge / .empty / .icon-btn. */
+
+.agents {
+  position: relative;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-width: 0;
+  scrollbar-gutter: stable;
+}
+
+/* ── En-tête repliable ──────────────────────────────────────────────── */
+.agents__head {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  height: 96px;
+  padding: 0 26px;
+  border-bottom: 1px solid var(--line-soft);
+  background: rgba(250, 249, 246, 0.82);
+  backdrop-filter: blur(16px) saturate(130%);
+  transition: height 160ms ease, padding 160ms ease;
+}
+.agents__head[data-compact="true"] {
+  height: 56px;
+}
+.agents__title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 300;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  transition: font-size 160ms ease;
+}
+.agents__head[data-compact="true"] .agents__title {
+  font-size: 17px;
+  font-weight: 400;
+}
+.agents__sub {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+/* ── Barre de filtres ───────────────────────────────────────────────── */
+.agents__toolbar {
+  position: sticky;
+  top: 96px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 26px;
+  border-bottom: 1px solid var(--line-soft);
+  background: rgba(250, 249, 246, 0.66);
+  backdrop-filter: blur(10px);
+  transition: top 160ms ease;
+}
+.agents__head[data-compact="true"] + .agents__toolbar {
+  top: 56px;
+}
+.agents__hint {
+  font-size: 11.5px;
+  color: var(--muted-2);
+  white-space: nowrap;
+}
+
+.origin-tabs {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--glass);
+}
+.origin-tabs__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 11.5px;
+  color: var(--muted);
+  transition: background 120ms ease, color 120ms ease;
+}
+.origin-tabs__tab:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--ink-soft);
+}
+.origin-tabs__tab[aria-selected="true"] {
+  background: var(--ink);
+  color: var(--bg);
+}
+.origin-tabs__tab[aria-selected="true"] .origin-tabs__count {
+  color: rgba(250, 249, 246, 0.68);
+}
+.origin-tabs__count {
+  font-size: 11.5px;
+  color: var(--muted-2);
+}
+
+/* ── Grille ─────────────────────────────────────────────────────────── */
+.agents__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 318px;
+  gap: 18px;
+  align-items: start;
+  padding: 16px 26px 48px;
+}
+.agents__board {
+  min-width: 0;
+}
+.agents-board {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 14px;
+  align-items: start;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.agents-board__item {
+  display: grid;
+  min-width: 0;
+  list-style: none;
+}
+
+/* ── Carte de session ───────────────────────────────────────────────── */
+.agent-card {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--glass);
+  backdrop-filter: blur(16px) saturate(130%);
+  box-shadow: var(--shadow-card);
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+.agent-card:hover {
+  border-color: #dcdcd7;
+}
+.agent-card--attention {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.18), var(--shadow-card);
+}
+.agent-card__head {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
+  gap: 7px;
+  align-items: start;
+}
+.agent-card__dot {
+  width: 7px;
+  height: 7px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: var(--muted-2);
+}
+.agent-card__dot[data-running="true"] {
+  background: var(--ok);
+  box-shadow: 0 0 0 3px rgba(63, 125, 78, 0.14);
+}
+.agent-card__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.agent-card__model {
+  max-width: 132px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.agent-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.agent-card__origin {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted-2);
+}
+.agent-card__cwd {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.agent-card__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--ink-soft);
+}
+.agent-card__preview {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.agent-card__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 2px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line-soft);
+}
+.agent-card__foot .icon-btn {
+  width: 26px;
+  height: 26px;
+  font-size: 11.5px;
+}
+
+/* ── Rail des sous-agents ───────────────────────────────────────────── */
+.agents__rail {
+  position: sticky;
+  top: 152px;
+  display: grid;
+  gap: 10px;
+  max-height: calc(100vh - 176px);
+  overflow-y: auto;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--glass);
+  backdrop-filter: blur(16px) saturate(130%);
+  box-shadow: var(--shadow-card);
+}
+.agents__group {
+  display: grid;
+  gap: 4px;
+}
+.agents__group + .agents__group {
+  padding-top: 8px;
+  border-top: 1px solid var(--line-soft);
+}
+.agents__group-title {
+  margin: 0;
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--ink-soft);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── Arbre ──────────────────────────────────────────────────────────── */
+.subtree {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 3px;
+}
+.subtree__node {
+  list-style: none;
+  min-width: 0;
+}
+.subtree__row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: start;
+  padding: 5px 6px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.022);
+}
+.subtree__goal {
+  font-size: 11.5px;
+  line-height: 1.48;
+  color: var(--ink-soft);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.subtree__dur {
+  padding-top: 1px;
+  font-size: 11.5px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* ── Adaptations ────────────────────────────────────────────────────── */
+@media (max-width: 1180px) {
+  .agents__layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .agents__rail {
+    position: static;
+    max-height: none;
+  }
+}
+@media (max-width: 720px) {
+  .agents__head,
+  .agents__toolbar,
+  .agents__layout {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .agents__toolbar {
+    flex-wrap: wrap;
+  }
+}
+
+
+/* Masquer un sous-agent terminé depuis l'arbre. */
+.subtree__dismiss {
+  margin-left: auto;
+  width: 18px; height: 18px; padding: 0;
+  display: grid; place-items: center;
+  border: 0; border-radius: 6px;
+  background: transparent; color: var(--muted);
+  font-size: 14px; line-height: 1; cursor: pointer;
+  opacity: 0; transition: opacity .12s ease, background .12s ease;
+}
+.subtree__row:hover .subtree__dismiss,
+.subtree__dismiss:focus-visible { opacity: 1; }
+.subtree__dismiss:hover { background: color-mix(in srgb, var(--ink) 10%, transparent); color: var(--ink); }

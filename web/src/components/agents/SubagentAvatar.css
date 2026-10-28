@@ -1,0 +1,90 @@
+/* Avatar de sous-agent — vignette générée : dégradé + monogramme.
+   Aucune image : seulement du texte et du CSS. Les couleurs de contour
+   viennent du thème (--ink, --line, --err) pour tenir dans les deux modes. */
+
+.sa-avatar {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  vertical-align: middle;
+  line-height: 1;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: #ffffff;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.28);
+  /* Filet interne : garde la vignette lisible sur fond clair comme sombre. */
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--line) 55%, transparent);
+  user-select: none;
+  -webkit-user-select: none;
+  transition: box-shadow 140ms ease;
+}
+
+.sa-avatar__glyph {
+  display: block;
+  transform: translateY(-0.02em);
+}
+
+/* Deux initiales : on resserre le rendu sans changer la taille demandée. */
+.sa-avatar[data-glyph="2"] .sa-avatar__glyph {
+  transform: scale(0.84);
+  letter-spacing: -0.04em;
+}
+
+/* ── Anneaux d'état ───────────────────────────────────────────────────── */
+.sa-avatar::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.sa-avatar[data-state="running"]::after {
+  border: 1.5px solid var(--ink);
+  opacity: 0.45;
+  animation: sa-avatar-pulse 1.6s ease-out infinite;
+}
+
+.sa-avatar[data-state="error"]::after {
+  border: 1.5px solid var(--err);
+  opacity: 0.9;
+}
+
+@keyframes sa-avatar-pulse {
+  0% {
+    transform: scale(0.92);
+    opacity: 0.5;
+  }
+  70% {
+    transform: scale(1.16);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.16);
+    opacity: 0;
+  }
+}
+
+/* Accessibilité : pas de pulsation, l'anneau reste visible en statique. */
+@media (prefers-reduced-motion: reduce) {
+  .sa-avatar[data-state="running"]::after {
+    animation: none;
+    opacity: 0.45;
+  }
+
+  .sa-avatar {
+    transition: none;
+  }
+}
+
+/* Repli quand color-mix n'est pas disponible : filet discret à la place. */
+@supports not (box-shadow: inset 0 0 0 1px color-mix(in srgb, red 50%, transparent)) {
+  .sa-avatar {
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+  }
+
+  [data-theme="dark"] .sa-avatar {
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  }
+}

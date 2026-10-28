@@ -1,0 +1,295 @@
+/* Fenêtre d'options — overlay flouté, onglets verticaux, contenu à droite. */
+
+.opt-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(18, 18, 16, 0.34);
+  backdrop-filter: blur(7px) saturate(115%);
+  animation: opt-fade 140ms ease-out;
+}
+
+.opt-dialog {
+  width: min(640px, 100%);
+  max-height: min(78vh, 620px);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--glass-strong);
+  backdrop-filter: blur(22px) saturate(140%);
+  box-shadow: var(--shadow-pop);
+  overflow: hidden;
+  animation: opt-rise 160ms ease-out;
+}
+
+.opt-dialog__head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 14px 14px 12px 20px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.opt-dialog__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+.opt-dialog__sub {
+  font-size: 10px;
+  color: var(--muted-2);
+}
+.opt-dialog__close {
+  margin-left: auto;
+  font-size: 17px;
+  line-height: 1;
+}
+
+.opt-dialog__body {
+  display: grid;
+  grid-template-columns: 178px minmax(0, 1fr);
+  min-height: 0;
+  flex: 1;
+}
+
+/* Onglets verticaux */
+.opt-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 10px;
+  border-right: 1px solid var(--line-soft);
+  background: var(--well);
+  overflow-y: auto;
+}
+.opt-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 12.5px;
+  text-align: left;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+.opt-tab:hover { background: var(--hover); }
+.opt-tab:focus-visible { outline: 2px solid var(--info); outline-offset: 1px; }
+.opt-tab[data-active="true"] {
+  background: var(--glass-strong);
+  border-color: var(--line);
+  color: var(--ink);
+  font-weight: 500;
+}
+.opt-tab__glyph {
+  width: 14px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* Contenu */
+.opt-panels {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px 20px 22px;
+}
+.opt-panel {
+  display: grid;
+  gap: 12px;
+  outline: none;
+}
+.opt-panel__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+.opt-hint {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.opt-field {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+}
+.opt-field__label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted-2);
+}
+.opt-input {
+  width: 100%;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--input-bg);
+  color: var(--ink);
+  font-size: 12px;
+  outline: none;
+}
+.opt-input:focus { border-color: var(--muted-2); }
+
+/* Le sélecteur de modèle se déplie dans le flux : pas de clipping par le scroll. */
+.opt-panel .mp { display: grid; justify-items: start; width: 100%; }
+.opt-panel .mp__panel {
+  position: static;
+  width: 100%;
+  box-shadow: none;
+  background: var(--well);
+}
+
+/* Choix de thème : trois boutons radio visuels */
+.theme-choices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.theme-choice {
+  display: grid;
+  gap: 3px;
+  justify-items: start;
+  padding: 10px 11px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--glass);
+  color: var(--ink-soft);
+  text-align: left;
+  transition: border-color 120ms ease, background 120ms ease, color 120ms ease;
+}
+.theme-choice:hover { border-color: var(--muted-2); }
+.theme-choice:focus-visible { outline: 2px solid var(--info); outline-offset: 1px; }
+.theme-choice[data-active="true"] {
+  border-color: var(--ink);
+  background: var(--active);
+  color: var(--ink);
+}
+.theme-choice__glyph { font-size: 15px; color: var(--ink); }
+.theme-choice__label { font-size: 12.5px; font-weight: 500; }
+.theme-choice__hint {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+/* Dossiers récents */
+.opt-recents {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  display: grid;
+  gap: 2px;
+}
+.opt-recent {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  text-align: left;
+}
+.opt-recent:hover { background: var(--hover); color: var(--ink-soft); }
+.opt-recent[data-active="true"] { border-color: var(--line); color: var(--ink); }
+.opt-recent__icon { font-size: 10px; color: var(--muted-2); }
+.opt-recent__path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Raccourcis */
+.opt-keys {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.opt-keys th,
+.opt-keys td {
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--line-soft);
+  text-align: left;
+  font-weight: 400;
+  vertical-align: baseline;
+}
+.opt-keys th { width: 38%; }
+.opt-keys td { color: var(--ink-soft); }
+.opt-keys tr:last-child th,
+.opt-keys tr:last-child td { border-bottom: 0; }
+.opt-keys kbd {
+  display: inline-block;
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  background: var(--well);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--ink-soft);
+}
+
+/* À propos */
+.opt-about {
+  margin: 0;
+  display: grid;
+  gap: 0;
+}
+.opt-about > div {
+  display: grid;
+  grid-template-columns: 128px minmax(0, 1fr);
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.opt-about > div:last-child { border-bottom: 0; }
+.opt-about dt {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.opt-about dd {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--ink-soft);
+}
+
+@keyframes opt-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes opt-rise {
+  from { opacity: 0; transform: translateY(6px) scale(0.995); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (max-width: 620px) {
+  .opt-dialog { max-height: 88vh; }
+  .opt-dialog__body { grid-template-columns: minmax(0, 1fr); }
+  .opt-tabs {
+    flex-direction: row;
+    overflow-x: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .opt-tab { white-space: nowrap; }
+  .theme-choices { grid-template-columns: minmax(0, 1fr); }
+}

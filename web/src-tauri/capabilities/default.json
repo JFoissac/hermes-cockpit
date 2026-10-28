@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Permissions minimales : la fenêtre principale charge l'UI locale et appelle l'API du cockpit.",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

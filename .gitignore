@@ -1,0 +1,17 @@
+node_modules/
+dist/
+target/
+*.log
+.env
+.DS_Store
+*.tsbuildinfo
+web/src/types/generated/
+web/src-tauri/target/
+web/src-tauri/gen/
+web/src-tauri/icons/android/
+
+# dossier de compilation alternatif (tests sans verrou binaire)
+server/target-test/
+
+# captures d'écran locales : jamais publiées (elles montrent de vraies conversations)
+docs/qa/

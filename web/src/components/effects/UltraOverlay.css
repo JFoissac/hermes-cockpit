@@ -1,0 +1,197 @@
+/* Ultracode — overlay plein écran « sensation de vitesse ».
+   Décoratif et inerte : pointer-events jamais, aucun impact sur les clics.
+   Le canvas ASCII de l'app reste lisible : le mode de fusion s'inverse selon
+   le thème (multiply sur fond clair, screen sur fond sombre) et l'opacité
+   reste modérée. */
+
+.ultra {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  overflow: hidden;
+  contain: layout paint style;
+  isolation: isolate;
+
+  /* Teintes bleu / violet / cyan, alignées sur la palette du cockpit. */
+  --ultra-a: 79, 124, 255;
+  --ultra-b: 160, 107, 255;
+  --ultra-c: 96, 214, 255;
+
+  animation: ultra-fade-in 320ms ease-out both;
+}
+
+.ultra * {
+  pointer-events: none;
+}
+
+/* ── Traînées radiales (canvas 2D) ────────────────────────────────────── */
+.ultra__canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  mix-blend-mode: multiply;
+  opacity: 0.7;
+}
+
+[data-theme="dark"] .ultra__canvas {
+  mix-blend-mode: screen;
+  opacity: 0.95;
+}
+
+/* ── Halo central qui respire ─────────────────────────────────────────── */
+.ultra__halo {
+  position: absolute;
+  inset: -18%;
+  background: radial-gradient(
+    closest-side at 50% 50%,
+    rgba(var(--ultra-b), 0.34) 0%,
+    rgba(var(--ultra-a), 0.18) 34%,
+    rgba(var(--ultra-a), 0) 68%
+  );
+  mix-blend-mode: multiply;
+  opacity: 0.5;
+  animation: ultra-pulse 2.6s ease-in-out infinite;
+  will-change: opacity, transform;
+}
+
+[data-theme="dark"] .ultra__halo {
+  mix-blend-mode: screen;
+  opacity: 0.75;
+}
+
+/* ── Scanline qui défile lentement ────────────────────────────────────── */
+.ultra__scan {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(var(--ultra-c), 0.1) 0px,
+    rgba(var(--ultra-c), 0.1) 1px,
+    rgba(var(--ultra-c), 0) 1px,
+    rgba(var(--ultra-c), 0) 3px
+  );
+  mix-blend-mode: multiply;
+  opacity: 0.45;
+  animation: ultra-drift 7s linear infinite;
+  will-change: transform;
+}
+
+[data-theme="dark"] .ultra__scan {
+  mix-blend-mode: screen;
+  opacity: 0.6;
+}
+
+/* ── Vignette radiale qui pulse ───────────────────────────────────────── */
+.ultra__vig {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      120% 90% at 50% 50%,
+      rgba(0, 0, 0, 0) 38%,
+      color-mix(in srgb, var(--ink) 30%, transparent) 100%
+    ),
+    radial-gradient(
+      closest-side at 50% 50%,
+      rgba(var(--ultra-a), 0.1) 0%,
+      rgba(var(--ultra-b), 0) 70%
+    );
+  animation: ultra-breathe 3.4s ease-in-out infinite alternate;
+}
+
+/* ── Libellé : bas au centre, monospace, point qui pulse ──────────────── */
+.ultra__label {
+  position: absolute;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  max-width: min(92vw, 560px);
+  padding: 6px 14px 6px 11px;
+  border: 1px solid rgba(var(--ultra-a), 0.42);
+  border-radius: 999px;
+  background: color-mix(
+    in srgb,
+    var(--glass-strong, rgba(255, 255, 255, 0.9)) 82%,
+    transparent
+  );
+  backdrop-filter: blur(8px);
+  box-shadow: 0 6px 24px rgba(var(--ultra-b), 0.14);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--ink-soft, var(--ink));
+}
+
+.ultra__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ultra__dot {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgb(var(--ultra-c));
+  box-shadow: 0 0 0 0 rgba(var(--ultra-c), 0.6);
+  animation: ultra-dot 1.4s ease-out infinite;
+}
+
+/* ── Animations ───────────────────────────────────────────────────────── */
+@keyframes ultra-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes ultra-pulse {
+  0%, 100% { opacity: 0.42; transform: scale(0.94); }
+  50% { opacity: 0.72; transform: scale(1.04); }
+}
+
+@keyframes ultra-drift {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(0, 3px, 0); }
+}
+
+@keyframes ultra-breathe {
+  from { opacity: 0.55; }
+  to { opacity: 0.95; }
+}
+
+@keyframes ultra-dot {
+  0% { box-shadow: 0 0 0 0 rgba(var(--ultra-c), 0.55); }
+  70% { box-shadow: 0 0 0 7px rgba(var(--ultra-c), 0); }
+  100% { box-shadow: 0 0 0 0 rgba(var(--ultra-c), 0); }
+}
+
+/* ── Mouvement réduit : halo et vignette figés, plus une seule animation ─ */
+@media (prefers-reduced-motion: reduce) {
+  .ultra,
+  .ultra__halo,
+  .ultra__scan,
+  .ultra__vig,
+  .ultra__dot {
+    animation: none;
+  }
+  .ultra__halo { opacity: 0.55; transform: none; }
+  .ultra__vig { opacity: 0.8; }
+}
+
+/* Le composant signale lui-même la préférence : ceinture et bretelles. */
+.ultra[data-reduced="true"] .ultra__halo,
+.ultra[data-reduced="true"] .ultra__scan,
+.ultra[data-reduced="true"] .ultra__vig,
+.ultra[data-reduced="true"] .ultra__dot {
+  animation: none;
+}

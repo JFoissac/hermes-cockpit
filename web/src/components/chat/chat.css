@@ -1,0 +1,501 @@
+/* chat.css — fil de conversation façon messagerie mobile.
+ *
+ * Tout ce qui est propre au fil vit ici ; le composer et l'en-tête restent
+ * stylés par theme.css (mêmes classes, aucun override nécessaire).
+ * Couleurs : variables du thème uniquement, avec repli clair pour les
+ * variables de bulle ajoutées par le thème.
+ */
+
+/* ── Piste de messages ─────────────────────────────────────────────────── */
+.chat .messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px 20px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  scrollbar-gutter: stable;
+}
+
+/* ── Bulles ────────────────────────────────────────────────────────────── */
+.bubble {
+  max-width: 74%;
+  padding: 13px 17px;
+  font-size: 14.5px;
+  line-height: 1.62;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Utilisateur : à droite, coin bas-droit pincé. */
+.bubble--right {
+  align-self: flex-end;
+  background: var(--bubble-user, #1f6f7a);
+  color: var(--bubble-user-ink, #f2fbfc);
+  border-radius: 20px 20px 6px 20px;
+}
+
+/* Assistant : à gauche, coin bas-gauche pincé. */
+.bubble--left {
+  align-self: flex-start;
+  background: var(--bubble-assistant, #eceae5);
+  color: var(--ink);
+  border-radius: 20px 20px 20px 6px;
+}
+
+/* ── Bloc d'activité (outils + thinking) repliable ─────────────────────── */
+.activity {
+  align-self: flex-start;
+  max-width: 78%;
+  display: grid;
+  gap: 6px;
+}
+
+.activity__summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-self: start;
+  max-width: 100%;
+  padding: 3px 8px 3px 4px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: var(--muted);
+  text-align: left;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+.activity__summary:hover { background: var(--hover); color: var(--ink-soft); }
+.activity__summary:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.activity[data-open="true"] .activity__summary { color: var(--ink-soft); }
+
+.activity__chevron {
+  display: inline-block;
+  width: 1em;
+  text-align: center;
+  font-size: 9px;
+}
+
+.activity__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activity__body {
+  display: grid;
+  gap: 8px;
+  padding: 9px 11px;
+  border: 1px solid var(--line-soft);
+  border-radius: 12px;
+  background: var(--well);
+}
+
+.activity__tools {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+}
+
+/* « nom · aperçu » sur une ligne, jamais plus de deux lignes visibles. */
+.activity__tool {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+
+.activity__thinking {
+  margin: 0;
+  padding-top: 2px;
+  border-top: 1px solid var(--line-soft);
+  font-size: 11.5px;
+  font-style: italic;
+  line-height: 1.55;
+  color: var(--muted);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+/* ── Bulle d'attente (streaming) ───────────────────────────────────────── */
+.bubble--typing {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+}
+
+.typing__dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.typing__dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--muted);
+  animation: chat-typing 1.15s ease-in-out infinite;
+}
+.typing__dot:nth-child(2) { animation-delay: 0.16s; }
+.typing__dot:nth-child(3) { animation-delay: 0.32s; }
+
+.typing__count {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--muted);
+}
+
+@keyframes chat-typing {
+  0%, 60%, 100% { opacity: 0.25; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-2px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .typing__dot {
+    animation: none;
+    opacity: 0.6;
+    transform: none;
+  }
+}
+
+/* ── Téléphone : bulles plus larges, gouttières plus serrées ────────────── */
+@media (max-width: 640px) {
+  .chat .messages { padding: 14px 12px 8px; gap: 8px; }
+  .bubble,
+  .activity { max-width: 88%; }
+}
+
+
+/* Notifications du harnais : ni à droite ni à gauche, un filet discret. */
+.thread-system {
+  align-self: center;
+  max-width: 86%;
+  margin: 2px 0;
+  padding: 6px 10px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.thread-system__tag {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 9px;
+  color: var(--muted-2);
+  margin-right: 6px;
+}
+
+/* Aperçu du thinking, replié : on lit la première ligne sans déplier. */
+.activity__peek {
+  flex: 1 1 100%;
+  min-width: 0;
+  margin-top: 3px;
+  color: var(--muted-2);
+  font-size: 10px;
+  font-style: italic;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.activity__summary { flex-wrap: wrap; }
+
+
+/* ── menu « / » : commandes + skills ─────────────────────────────────────── */
+.slash {
+  position: absolute; left: 10px; right: 10px; bottom: calc(100% + 6px);
+  max-height: 268px; overflow-y: auto;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, .18);
+  z-index: 5;
+}
+.slash__group + .slash__group { margin-top: 4px; }
+.slash__label {
+  margin: 4px 8px 2px;
+  font-size: var(--fs-meta);
+  letter-spacing: .08em; text-transform: uppercase;
+  color: var(--muted);
+}
+.slash__item {
+  width: 100%; display: flex; align-items: baseline; gap: 10px;
+  padding: 6px 8px; border: 0; border-radius: 8px;
+  background: transparent; color: var(--ink);
+  font-family: var(--font-ui); font-size: var(--fs-ui);
+  text-align: left; cursor: pointer;
+}
+.slash__item[data-active="true"] { background: color-mix(in srgb, var(--ink) 9%, transparent); }
+.slash__name { font-family: var(--font-mono); font-size: 13px; }
+.slash__hint { color: var(--muted); font-size: var(--fs-meta); }
+
+.composer__hint--notice { color: var(--ink-soft); }
+
+
+/* Vignettes des images collées dans le composer */
+.composer__thumbs { display: flex; flex-wrap: wrap; gap: 8px; padding: 6px 4px 2px; }
+.thumb { position: relative; display: block; }
+.thumb img {
+  width: 54px; height: 54px; object-fit: cover;
+  border-radius: 9px; border: 1px solid var(--line); display: block;
+}
+.thumb__x {
+  position: absolute; top: -7px; right: -7px;
+  width: 18px; height: 18px; padding: 0;
+  display: grid; place-items: center;
+  border: 1px solid var(--line); border-radius: 50%;
+  background: var(--surface); color: var(--ink);
+  font-size: 12px; line-height: 1; cursor: pointer;
+}
+
+/* Réponses longues : on ne laisse jamais un mot déborder de la bulle. */
+.bubble--left, .bubble--right, .activity__thinking { overflow-wrap: anywhere; word-break: break-word; }
+.activity__thinking { white-space: pre-wrap; }
+
+
+/* ── Contrôles du composer : modèle, effort, ultracode ──────────────────── */
+.composer__model {
+  display: flex; align-items: center; gap: 10px;
+  padding: 4px 4px 2px;
+}
+.composer__effort-label {
+  font-size: var(--fs-meta); color: var(--muted);
+}
+
+/* Barre d'effort : quatre crans, animés pendant que l'agent travaille. */
+.effort { display: inline-flex; align-items: center; gap: 3px; }
+.effort__dot {
+  width: 16px; height: 16px; padding: 0;
+  display: grid; place-items: center;
+  border: 1px solid var(--line); border-radius: 5px;
+  background: transparent; color: var(--muted);
+  font-family: var(--font-mono); font-size: 9px; line-height: 1;
+  cursor: pointer; transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+.effort__dot[aria-pressed="true"] {
+  background: var(--ink); color: var(--surface); border-color: var(--ink);
+}
+.effort[data-busy="true"] .effort__dot[aria-pressed="true"] {
+  animation: effort-pulse 1.1s ease-in-out infinite;
+}
+@keyframes effort-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: .55; transform: scale(.88); }
+}
+.effort[data-level="high"] .effort__dot:nth-child(-n+3),
+.effort[data-level="xhigh"] .effort__dot { }
+
+.ultracode { color: var(--ink); font-size: 14px; }
+.ultracode:hover { background: color-mix(in srgb, var(--ink) 10%, transparent); }
+
+/* La barre d'effort vit sur sa propre ligne, au-dessus du champ : elle respire,
+   ne comprime plus le micro ni l'envoi, et reste alignée avec le modèle. */
+.composer__model {
+  display: flex; align-items: center; gap: 12px;
+  padding: 2px 4px 6px; min-width: 0;
+}
+.composer__model > :first-child { flex: 0 1 auto; min-width: 0; }
+.composer__effort { flex: 1 1 220px; max-width: 280px; min-width: 180px; }
+
+/* Dans le composer, la barre d'effort est COMPACTE : une seule ligne
+   (libellé + piste), sans l'en-tête « Niveau d'effort » qui la faisait
+   s'écraser et rendait la piste invisible (8 px de large mesurés). */
+.composer__effort { display: block; }
+.composer__effort .effort__meta { display: none; }
+.composer__effort .effort__row { width: 100%; gap: 8px; }
+.composer__effort .effort__label { flex: 0 0 auto; min-width: 66px; }
+.composer__effort .effort__rail { flex: 1 1 auto; width: 100%; min-width: 120px; }
+
+
+/* ── Barre d'effort : compacte à côté d'Ultracode, gonfle au survol ────────
+   Petite au repos (elle ne mange plus la ligne du champ), elle s'élargit et
+   s'épaissit au survol. Plus le niveau est haut, plus les points scintillent. */
+.composer__effort {
+  flex: 0 0 auto;
+  width: 92px;
+  min-width: 92px;
+  transition: width 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.composer__effort:hover,
+.composer__effort:focus-within { width: 168px; }
+
+.composer__effort .effort__meta { display: none; }
+.composer__effort .effort__row { width: 100%; gap: 6px; }
+.composer__effort .effort__label { font-size: 11px; min-width: 0; }
+
+.composer__effort .effort__rail { min-height: 22px; padding: 3px 0; }
+.composer__effort .effort__track {
+  height: 10px;
+  border-radius: 999px;
+  background-color: color-mix(in srgb, #2a1b4d 70%, transparent);
+  background-image: linear-gradient(90deg, #4b3f8f 0%, #6d3f9e 100%);
+  border: 1px solid color-mix(in srgb, #b46cff 24%, transparent);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45);
+  transition: height 220ms ease;
+  overflow: hidden;
+}
+.composer__effort:hover .effort__track { height: 13px; }
+
+.composer__effort .effort__fill {
+  background-image: linear-gradient(90deg, #5b6cff, #8b5cf6, #d946ef, #8b5cf6, #5b6cff);
+  background-size: 300% 100%;
+  animation: effort-flow 6s linear infinite;
+  box-shadow: 0 0 12px color-mix(in srgb, #a855f7 55%, transparent);
+  will-change: background-position;
+  position: absolute;
+  overflow: hidden;
+}
+.composer__effort .effort__thumb {
+  width: 12px; height: 12px;
+  background: #f8f5ff;
+  box-shadow: 0 0 0 2px color-mix(in srgb, #a855f7 28%, transparent), 0 1px 6px rgba(0,0,0,.5);
+}
+.composer__effort:hover .effort__thumb { width: 15px; height: 15px; }
+
+/* Scintillements : nombre et vivacité suivent le niveau choisi. */
+.composer__effort .effort__fill::after {
+  content: "";
+  position: absolute; inset: 0;
+  background-image: radial-gradient(circle, rgba(255,255,255,0.95) 1px, transparent 1.6px);
+  background-size: 26px 26px;
+  opacity: calc(0.12 + var(--sparkle, 0) * 0.12);
+  animation: effort-sparkle calc(4.4s - var(--sparkle, 0) * 0.7s) ease-in-out infinite;
+  pointer-events: none;
+}
+.composer__effort[data-level="low"] { --sparkle: 1; }
+.composer__effort[data-level="medium"] { --sparkle: 2; }
+.composer__effort[data-level="high"] { --sparkle: 3; }
+.composer__effort[data-level="xhigh"] { --sparkle: 4; }
+.composer__effort[data-level="ultra"] { --sparkle: 5; }
+.composer__effort .effort__fill::after { background-size: calc(30px - var(--sparkle, 0) * 4px) calc(30px - var(--sparkle, 0) * 4px); }
+
+.composer__effort[data-busy="true"] .effort__fill { animation-duration: 1.6s; }
+.composer__effort[data-busy="true"] .effort__fill::after { animation-duration: 1s; }
+.composer__effort[data-busy="true"] .effort__thumb { animation: effort-pulse 1.1s ease-in-out infinite; }
+
+@keyframes effort-flow {
+  from { background-position: 0% 50%; }
+  to { background-position: 300% 50%; }
+}
+@keyframes effort-sparkle {
+  0%, 100% { opacity: calc(0.10 + var(--sparkle, 0) * 0.06); }
+  50% { opacity: calc(0.22 + var(--sparkle, 0) * 0.11); }
+}
+@keyframes effort-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.18); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .composer__effort,
+  .composer__effort .effort__track,
+  .composer__effort .effort__fill,
+  .composer__effort .effort__fill::after,
+  .composer__effort .effort__thumb { transition: none; animation: none; }
+}
+
+/* ── Barre du bas : aide à gauche, contrôles à droite, sans chevauchement ── */
+.composer__bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.composer__left { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 auto; }
+.composer__left .composer__hint { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.composer__right {
+  display: flex; align-items: center; gap: 8px;
+  flex: 0 1 auto; min-width: 0;
+}
+/* La barre d'effort ne déborde plus sur le micro ni sur ⚡. */
+.composer__effort { flex: 0 0 auto; width: 92px; min-width: 92px; margin: 0 2px; }
+.composer__effort:hover, .composer__effort:focus-within { width: 150px; }
+.composer__right > .mp, .composer__right > [class*="mp"] { flex: 0 0 auto; }
+
+/* Les messages d'état vivent au-dessus de la barre : la rangée du bas reste
+   [modèle] [effort] [⚡] [micro] [envoi], dans cet ordre, sans être poussée. */
+.composer__notices { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 4px 4px; }
+.composer__right > * { flex: 0 0 auto; }
+
+
+/* ── Barre d'effort : entière, lisible, grandit au survol ─────────────────
+   Mesures du 28/10 : 92 px de boîte pour 170 px de contenu, donc la barre
+   était coupée ET peignait sur ⚡ et le micro. On lui donne sa largeur réelle,
+   et l'expansion au survol se fait vers la GAUCHE (le groupe de droite est
+   aligné à droite), donc ⚡, le micro et l'envoi ne bougent pas. */
+.composer__right { justify-content: flex-end; }
+.composer__effort {
+  width: 168px; min-width: 168px; max-width: 168px;
+  overflow: visible;
+  transition: width 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* L'expansion se compense par une marge négative : la place occupée dans la
+   rangée ne change pas, donc ⚡, le micro et l'envoi restent exactement où ils
+   sont, et la barre grandit vers la gauche. */
+.composer__effort:hover,
+.composer__effort:focus-within {
+  width: 232px; min-width: 232px; max-width: 232px;
+  margin-left: -64px;
+}
+
+/* Le niveau choisi se lit à côté de la barre. */
+.composer__effort .effort__label {
+  display: inline-block;
+  flex: 0 0 auto;
+  min-width: 0;
+  max-width: 76px;
+  font-size: 11px;
+  line-height: 1.2;
+  letter-spacing: 0;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.composer__effort .effort__row { min-width: 0; width: 100%; gap: 8px; }
+.composer__effort .effort__rail { min-width: 0; flex: 1 1 auto; }
+.composer__effort .effort__track { width: 100%; height: 12px; }
+.composer__effort:hover .effort__track { height: 15px; }
+
+/* Points scintillants : visibles, densité et vitesse liées au niveau. */
+.composer__effort .effort__fill::after {
+  content: "";
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  background-image: radial-gradient(circle, rgba(255,255,255,0.95) 1.2px, transparent 1.8px);
+  opacity: calc(0.25 + var(--sparkle, 0) * 0.12);
+  animation: effort-sparkle calc(3.6s - var(--sparkle, 0) * 0.5s) linear infinite;
+  pointer-events: none;
+}
+.composer__effort .effort__fill { animation: effort-flow 5s linear infinite; }
+
+/* La puce du modèle reste compacte pour laisser la place. */
+.composer__right .mp__trigger { max-width: 140px; }
+
+/* Le libellé du modèle débordait de sa pilule (122 px de texte dans 90 px) :
+   c'est ce qui donnait des lettres superposées à côté de la barre d'effort. */
+.composer__right .mp__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
