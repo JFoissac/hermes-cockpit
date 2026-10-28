@@ -1,0 +1,133 @@
+name: release
+
+# Construit l'app desktop (Windows, macOS universel, Linux) ET le service local,
+# puis publie le tout dans une release GitHub.
+# macOS ne peut pas être compilé sur Windows : c'est ce workflow qui s'en charge,
+# sur un runner macOS fourni par GitHub.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Étiquette à publier (ex. v0.1.0)"
+        required: true
+        default: "v0.1.0"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: ""
+            suffix: windows-x64
+          - os: macos-latest
+            target: "aarch64-apple-darwin"
+            suffix: macos-arm64
+          - os: macos-13
+            target: "x86_64-apple-darwin"
+            suffix: macos-x64
+          - os: ubuntu-22.04
+            target: ""
+            suffix: linux-x64
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            web/src-tauri -> target
+            server -> target
+
+      - name: Dépendances Linux
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev \
+            librsvg2-dev patchelf build-essential libssl-dev
+
+      - name: Installer le front
+        working-directory: web
+        run: pnpm install --frozen-lockfile
+
+      - name: Construire l'app desktop
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: web
+          args: ${{ matrix.target != '' && format('--target {0}', matrix.target) || '' }}
+
+      - name: Construire le service local
+        working-directory: server
+        run: cargo build --release ${{ matrix.target != '' && format('--target {0}', matrix.target) || '' }}
+
+      - name: Rassembler les artefacts
+        shell: bash
+        run: |
+          mkdir -p dist-upload
+          find web/src-tauri/target -path '*release/bundle*' -type f \
+            \( -name '*.msi' -o -name '*.exe' -o -name '*.dmg' -o -name '*.app' -o -name '*.deb' -o -name '*.AppImage' \) \
+            -exec cp {} dist-upload/ \; 2>/dev/null || true
+          find server/target -maxdepth 4 -type f -name 'hermes-cockpit-server*' \
+            \( -name '*.exe' -o -perm -u+x \) -exec cp {} dist-upload/ \; 2>/dev/null || true
+          ls -la dist-upload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hermes-cockpit-${{ matrix.suffix }}
+          path: dist-upload/*
+          if-no-files-found: warn
+
+  publish:
+    name: publier la release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artefacts
+
+      - name: Aplatir les artefacts
+        run: |
+          mkdir -p release-files
+          find artefacts -type f -exec cp {} release-files/ \;
+          ls -la release-files
+
+      - name: Créer la release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${{ github.event.inputs.tag || github.ref_name }}"
+          gh release create "$tag" release-files/* \
+            --title "Hermes Cockpit $tag" \
+            --generate-notes \
+            --notes "Cockpit local pour agents Hermes (Windows, macOS, Linux).
+
+          **Le service local est indispensable** : lancez \`hermes-cockpit-server\`
+          puis l'application. Sans lui, l'app affiche l'accueil mais aucune
+          session (elle ne peut pas lire l'état Hermes)."

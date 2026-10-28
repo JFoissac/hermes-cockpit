@@ -444,7 +444,7 @@
    aligné à droite), donc ⚡, le micro et l'envoi ne bougent pas. */
 .composer__right { justify-content: flex-end; }
 .composer__effort {
-  width: 168px; min-width: 168px; max-width: 168px;
+  width: 150px; min-width: 150px; max-width: 150px;
   overflow: visible;
   transition: width 240ms cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -453,8 +453,8 @@
    sont, et la barre grandit vers la gauche. */
 .composer__effort:hover,
 .composer__effort:focus-within {
-  width: 232px; min-width: 232px; max-width: 232px;
-  margin-left: -64px;
+  width: 212px; min-width: 212px; max-width: 212px;
+  margin-left: -62px;
 }
 
 /* Le niveau choisi se lit à côté de la barre. */

@@ -1,164 +1,139 @@
-<div align="center">
-
 # Hermes Cockpit
 
-**Un seul écran pour voir tourner tous tes agents.**
+Cockpit **local** pour piloter et observer des agents [Hermes](https://hermes-agent.nousresearch.com) :
+sessions, sous-agents, agents OpenCode, chat complet, aperçu web du projet en cours et
+dictée vocale hors ligne.
 
-Sessions Hermes, subagents, agents OpenCode, dictée locale et aperçu de tes webapps —
-dans une interface calme, claire, avec un requin ASCII qui nage derrière.
+Application desktop (Tauri 2 + React 18) et service Rust (axum) qui lit la base d'état
+Hermes **en lecture seule** et relaie les tours vers l'API Hermes ou vers le CLI.
 
-`Rust` · `Tauri-ready` · `React 18` · `local-first` · `zéro télémétrie`
+![Accueil de Hermes Cockpit](docs/demo/01-accueil.png)
 
-</div>
+## Ce que fait l'application
 
----
+- **Sessions** : liste des conversations avec origine (`local`, `api_server`, `cli`,
+  OpenCode), état en cours, nombre de messages et d'outils.
+- **Sous-agents** : les sessions enfants apparaissent **sous leur conversation parente**,
+  avec un avatar déterministe, un anneau pulsé pendant qu'ils tournent et une croix pour
+  les masquer — ils disparaissent aussi seuls 10 min après leur fin. Un bouton retour
+  ramène à la conversation principale.
+- **Chat** : bulles façon messagerie (vous à droite, l'agent à gauche), blocs d'activité
+  repliés (outils + thinking), file d'attente quand un tour est déjà en cours, collage
+  d'images, menu `/` (commandes + skills), sélecteur de modèle, barre d'effort animée.
+- **Dictée vocale locale** : enregistrement WAV 16 kHz dans la page, transcription par
+  sherpa-onnx + modèle Parakeet — **aucune clé d'API, aucun envoi sur Internet**.
+- **Aperçu web** : charge le serveur de développement **du projet dont parle la
+  conversation** (jamais celui d'un autre projet), dans un cadre Desktop, iPhone 15,
+  Pixel 8 ou iPad mini.
+- **Ultracode** : trois agents en parallèle sur la même tâche (implémentation, revue,
+  vérification), animation plein écran et pastilles d'état en direct.
+- **Panneaux redimensionnables** : barre latérale et aperçu se glissent à la souris, la
+  largeur est mémorisée.
 
-## Pourquoi
-
-Quand on fait tourner plusieurs agents en parallèle, on finit par perdre le fil :
-trois terminaux, deux sessions Telegram, un OpenCode à moitié oublié, et aucune idée
-de quel subagent est bloqué sur quelle tâche.
-
-Hermes Cockpit lit ce que Hermes écrit déjà sur la machine — sans rien réécrire — et
-l'affiche en direct : qui tourne, sur quoi, avec quel coût, et ce que fait chaque
-subagent, outil par outil.
-
-## Ce que fait la V0
-
-| | |
-|---|---|
-| 🛰 **Observatoire** | Toutes les sessions Hermes lues depuis `state.db` en **lecture seule**, avec état `running` réel (baux de tour), coût, tokens, branche git. |
-| 🌿 **Subagents** | Arbre des délégations (`async_delegations`) : objectif, état, durée — et le transcript de chaque session enfant. |
-| 💬 **Chat** | Conversation avec Hermes via son API locale (`/api/sessions/{id}/chat/stream`), streaming SSE, bouton stop. |
-| 🔌 **OpenCode** | Les sessions OpenCode à côté des sessions Hermes, via `opencode api`. |
-| 🖥 **Aperçu** | Ta webapp dans un cadre d'appareil (Desktop / iPhone 15 / Pixel 8 / iPad mini), sans quitter l'app. |
-| 〰 **Scène marine** | Eau profonde en dégradé, rayons, plancton, bulles, deux bancs de poissons jaunes et un requin en demi-teinte derrière l'UI — 30 fps, ~1,2 ms/frame, figé si `prefers-reduced-motion`. |
-| 🌗 **Thème** | Clair, sombre ou système, palette marine dédiée à chaque thème. |
-| 🎙 **Dictée** | Bouton micro (Web Speech, fr-FR) : les partiels s'affichent, le final s'ancre dans le composer. |
-| 🧩 **Skills** | Catalogue des skills installés et ceux réellement utilisés par la session ouverte. |
-| ⚙ **Options** | Modale : apparence, modèle, dossier de travail, raccourcis, à propos. |
-| 🖥 **Desktop** | Coque Tauri v2 (`pnpm desktop`), fenêtre native, icône, bundle MSI à venir. |
-
-> **Statut : V0 en construction.** Le chat, l'observatoire et l'aperçu fonctionnent ;
-> la dictée locale et l'ouverture d'émulateur natif arrivent ensuite. Rien n'est simulé :
-> si une source est absente, l'écran le dit.
-
-## Captures
-
-| Accueil (clair) | Accueil (sombre) | Options |
-|---|---|---|
-| ![Accueil clair](docs/qa/scene-light.png) | ![Accueil sombre](docs/qa/scene-dark.png) | ![Options](docs/qa/options.png) |
-
-| Chat | Vue Agents |
-|---|---|
-| ![Chat](docs/qa/chat-view.png) | ![Agents](docs/qa/agents-view.png) |
-
-Raccourcis : **Entrée** envoie, **Maj+Entrée** passe à la ligne (Windows et macOS).
+![Sessions, agents et aperçu](docs/demo/02-sessions.png)
+![Conversation avec blocs d'outils](docs/demo/03-conversation.png)
 
 ## Architecture
 
 ```
-┌──────────────────────────── web/ (React 18 + Vite) ────────────────────────────┐
-│  Sidebar sessions   ·   Chat (SSE)   ·   Agents   ·   Aperçu (cadre appareil)   │
-│  AsciiBackground (canvas 2D, 30 fps, seeded PRNG)                               │
-└───────────────────────────────────┬────────────────────────────────────────────┘
-                                    │  /api/*  (proxy Vite en dev)
-┌───────────────────────────────────▼────────────────────────────────────────────┐
-│                        server/ (Rust · axum · 127.0.0.1:8791)                   │
-│  hermes_db   → state.db  (SQLite, READ-ONLY, jamais d'écriture)                 │
-│  hermes_api  → http://127.0.0.1:8642  (API server Hermes, bearer local)         │
-│  opencode    → `opencode api` (CLI officiel)                                    │
-└────────────────────────────────────────────────────────────────────────────────┘
+┌───────────────────────────┐        ┌──────────────────────────────┐
+│ Application desktop       │  HTTP  │ Service local (Rust, axum)   │
+│ Tauri 2 + React 18        │ ─────► │ 127.0.0.1:8791               │
+│ (même bundle que le web)  │  SSE   │                              │
+└───────────────────────────┘        │  • state.db  (lecture seule) │
+                                     │  • API Hermes (proxy SSE)    │
+                                     │  • CLI Hermes (sessions CLI) │
+                                     │  • dictée (sherpa-onnx)      │
+                                     └──────────────────────────────┘
 ```
 
-Détail des modules, contrats de données et invariants : [`docs/architecture.md`](docs/architecture.md).
+Trois invariants :
 
-## Application desktop
+1. **Aucun secret dans le dépôt.** La clé d'API Hermes est lue au runtime par le service
+   et ne quitte jamais la machine ; le front n'appelle que `127.0.0.1:8791`.
+2. **Aucune écriture dans `state.db`.** La base est ouverte en `read_only(true)`, et un
+   test Rust vérifie que toute écriture échoue.
+3. **Aucune donnée simulée.** Si une source manque, l'écran le dit au lieu d'inventer.
+
+Détails : [`docs/architecture.md`](docs/architecture.md).
+
+## Installation
+
+Prérequis : Windows 10/11, macOS 12+ ou Linux ; [Node 20+](https://nodejs.org),
+[pnpm](https://pnpm.io), [Rust stable](https://rustup.rs), et une installation Hermes
+(`~/.hermes` ou `HERMES_HOME`).
 
 ```bash
-pnpm -C web desktop        # fenêtre native (serveur Rust + Vite requis)
-pnpm -C web desktop:build  # installeur MSI
-```
-
-## Démarrage
-
-Prérequis : **Rust stable**, **Node ≥ 20 + pnpm**, et un Hermes local avec son API server activé.
-
-```bash
-git clone https://github.com/<toi>/hermes-cockpit.git
+git clone https://github.com/JFoissac/hermes-cockpit.git
 cd hermes-cockpit
 
-# 1. dépendances web
-pnpm -C web install
+# 1. le service local (obligatoire — sans lui, l'app n'a aucune donnée)
+cargo run --release --manifest-path server/Cargo.toml
 
-# 2. serveur Rust (terminal 1)
-cargo run --manifest-path server/Cargo.toml
-
-# 3. interface (terminal 2)
-pnpm -C web dev
+# 2. l'application desktop, dans un autre terminal
+cd web && pnpm install && pnpm tauri dev
 ```
 
-Ouvre <http://127.0.0.1:5183>.
+Pour l'utiliser dans un navigateur : `pnpm -C web dev` puis <http://127.0.0.1:5183>
+(Vite relaie `/api` vers le service).
 
-### Côté Hermes
+Guide complet, variables d'environnement et build des installeurs :
+[`docs/installation.md`](docs/installation.md).
 
-L'app lit deux choses, toutes deux locales :
+## Utilisation
 
-- `%LOCALAPPDATA%/hermes/state.db` (ou `$HERMES_HOME/state.db`) — **ouverte en lecture seule** ;
-- l'API server Hermes, activée dans `~/.hermes/.env` :
+Envoyer un message, dicter, changer de modèle, lancer Ultracode, redimensionner les
+panneaux : [`docs/usage.md`](docs/usage.md).
 
-```env
-API_SERVER_ENABLED=true
-API_SERVER_KEY=<une-clé-locale>
-```
+## API du service
 
-Hermes Cockpit récupère cette clé **au runtime**, depuis ton fichier `.env`. Elle n'est
-jamais copiée dans le repo, jamais loggée, jamais renvoyée au navigateur.
-
-## Configuration
-
-| Variable | Défaut | Rôle |
+| Méthode | Route | Rôle |
 |---|---|---|
-| `HERMES_HOME` | `%LOCALAPPDATA%/hermes` | Emplacement de `state.db` et `.env` |
-| `HERMES_API_BASE` | `http://127.0.0.1:8642` | Base de l'API server Hermes |
-| `PORT` | `8791` | Port du serveur cockpit |
+| GET | `/api/health` | état de l'API Hermes, de la base et d'OpenCode |
+| GET | `/api/observatory/sessions?limit=60` | sessions (origine, état, compteurs) |
+| GET | `/api/observatory/sessions/{id}/messages` | messages d'une session |
+| GET | `/api/observatory/subagents` | délégations (objectif, état, durées) |
+| GET | `/api/observatory/skills` | catalogue des skills |
+| GET | `/api/observatory/sessions/{id}/skills` | skills utilisés par une session |
+| POST | `/api/sessions` | crée une session côté API Hermes |
+| POST | `/api/chat/stream` | un tour, relayé en SSE |
+| POST | `/api/cli/stream` | un tour dans une session du CLI (`hermes --resume`) |
+| GET | `/api/preview/detect` | serveur de dev du projet de la conversation |
+| GET | `/api/dictation/status` | moteur de dictée disponible |
+| POST | `/api/dictation/transcribe` | audio base64 → texte |
 
-## Développement
+Contrats détaillés : [`docs/api.md`](docs/api.md).
+
+## Tests
 
 ```bash
-pnpm -C web test          # tests UI (vitest + testing-library)
-pnpm -C web exec tsc -b   # typecheck strict
-cargo test --manifest-path server/Cargo.toml
-cargo fmt --manifest-path server/Cargo.toml
+pnpm -C web test                                  # 166 tests UI
+cargo test --manifest-path server/Cargo.toml      # 41 tests Rust
 ```
 
-Le projet suit trois règles :
+Guide de développement (structure, conventions, TDD) : [`docs/development.md`](docs/development.md).
 
-1. **Zéro mock** dans le code de production — les données affichées viennent de la machine.
-2. **Zéro écriture** dans `state.db`, quel que soit le chemin de code.
-3. **Zéro secret** dans le dépôt — `.env` est ignoré, les clés restent locales.
+## Limites connues
 
-## Feuille de route
+- **Thinking** : affiché quand le fournisseur renvoie un raisonnement. Les modèles
+  `deepseek-*` de ce profil n'en émettent pas ; il faut un modèle « raisonneur ».
+- **Sessions du CLI** : l'API Hermes refuse (`permission_denied`) d'y écrire ; le cockpit
+  les pilote par leur propre transport (`hermes -z … --resume`), qui recharge tout le
+  contexte — lent sur les très grosses conversations.
+- **macOS** : non compilable depuis Windows ; la release est produite par GitHub Actions
+  (`.github/workflows/release.yml`).
 
-- [x] Observatoire des sessions Hermes (lecture seule)
-- [x] Arbre des subagents et délégations
-- [x] Chat streaming via l'API Hermes
-- [x] Aperçu webapp avec cadres d'appareil
-- [x] Fond ASCII animé (requin, canvas, 30 fps)
-- [ ] Dictée locale (whisper.cpp, push-to-talk, 100 % offline)
-- [ ] Vue Agents détaillée (timeline d'outils par subagent)
-- [ ] Coque Tauri v2 + installeur MSI
-- [ ] Ouverture de l'émulateur natif (Android ; iOS sur macOS)
-- [ ] Recherche plein texte dans l'historique (FTS5 déjà présent dans `state.db`)
+Dépannage : [`docs/troubleshooting.md`](docs/troubleshooting.md).
 
 ## Crédits
 
-- [Hermes Agent](https://github.com/NousResearch/hermes-agent) — l'agent, ses protocoles et sa base d'état.
+- [Hermes Agent](https://github.com/NousResearch/hermes-agent) — l'agent, ses protocoles
+  et sa base d'état.
 - [OpenCode](https://opencode.ai) — les sessions agent suivies via son API.
-- La direction visuelle (requin ASCII en demi-teinte, composer en verre) s'inspire de
-  l'écran « shark ascii animation » référencé sur [inspora.design](https://www.inspora.design/posts/shark-ascii-animation).
+- Direction visuelle inspirée de l'animation « shark ascii » référencée sur
+  [inspora.design](https://www.inspora.design/posts/shark-ascii-animation).
 - Typographies : Inter, JetBrains Mono.
 
 ## Licence
 
-À définir par l'auteur du dépôt (placeholder — voir `LICENSE` une fois choisie).
+MIT — voir [`LICENSE`](LICENSE).

@@ -1,106 +1,111 @@
-# Architecture — Hermes Cockpit
+# Architecture
 
 ## Vue d'ensemble
 
-Hermes Cockpit est un **lecteur** de l'écosystème d'agents local, doublé d'un client de chat.
 Deux processus, un seul dépôt :
 
 ```
-web/      interface React (Vite) — aucune donnée n'est inventée côté client
-server/   service Rust (axum)   — la seule couche qui touche au disque et à l'API Hermes
+web/      interface React 18 + Vite (TypeScript strict) — aucune donnée inventée
+server/   service Rust (axum) — seule couche qui touche au disque et à l'API Hermes
 ```
 
-Le serveur expose une API HTTP locale sur `127.0.0.1:8791`. En développement, Vite proxifie
-`/api` vers ce port ; en production, le même binaire peut servir `web/dist` (Tauri ou simple
-`cargo run`).
+Le service écoute sur `127.0.0.1:8791`. En développement, Vite relaie `/api` vers ce port ;
+en production, il sert lui-même `web/dist` — et la fenêtre Tauri charge cette URL, donc
+l'origine de la page et celle de l'API sont identiques (ni CORS, ni base d'URL à deviner).
 
-## Modules
+## Modules du service
 
-### `server/src/hermes_db.rs`
+### `hermes_db.rs` — la seule porte vers `state.db`
 
-Unique point d'accès à `state.db`. Ouvre la base avec `read_only(true)` et un `busy_timeout`
-court (300 ms) : la base est en WAL et partagée avec le gateway Hermes, qui en est le seul
-écrivain.
+Base ouverte en `read_only(true)`, `busy_timeout` court (300 ms) : elle est en WAL et
+partagée avec le gateway Hermes, qui en est le seul écrivain.
 
 | Fonction | Table | Usage |
 |---|---|---|
-| `sessions(limit)` | `sessions` | liste triée par activité, filtrée `archived=0 AND hidden=0` |
-| `messages_since(session, after_id, limit)` | `messages` | deltas incrémentaux (`messages.id` est un rowid monotone) |
-| `subagents(limit)` | `async_delegations` | délégations avec `goal` extrait de `task_json` |
-| `running_ids()` | `session_turn_leases` | badge `running` (bail non expiré) |
+| `sessions(limit)` | `sessions` | liste triée par activité (`archived=0`, `hidden=0`) |
+| `messages_since(...)` | `messages` | fenêtre calée sur les 12 derniers messages utilisateur |
+| `subagents(limit)` | `async_delegations` | objectif, état, durées |
+| `session_cwd(id)` | `sessions` | dossier de travail (aperçu) |
+| `session_skill_usage(id)` | `messages` | skills réellement utilisés |
 
-**Invariant :** aucune requête `INSERT`/`UPDATE`/`DELETE` ne doit exister dans ce module.
-Un test (`server/tests/db_readonly.rs`) vérifie qu'une écriture échoue.
+**Invariant :** aucun `INSERT`/`UPDATE`/`DELETE` dans ce module. Le test
+`server/tests/db_readonly.rs` vérifie qu'une écriture échoue.
 
-### `server/src/hermes_api.rs`
+### `hermes_api.rs` — client de l'API Hermes
 
-Client de l'API server Hermes (`http://127.0.0.1:8642`), authentifié par la clé locale
-`API_SERVER_KEY` lue dans `<hermes_home>/.env` au démarrage — **jamais** journalisée,
-**jamais** exposée au front.
+Authentifié par `API_SERVER_KEY`, lue dans `<hermes_home>/.env` au démarrage — jamais
+journalisée, jamais exposée au front.
 
-- `capabilities()` → `GET /v1/capabilities` (sert de sonde pour `/api/health`)
+- `capabilities()` → `GET /v1/capabilities` (sonde de `/api/health`)
 - `create_session(title)` → `POST /api/sessions`
-- `chat_stream(session_id, message)` → `POST /api/sessions/{id}/chat/stream`, relais SSE
-  octet pour octet (`event: <nom>\ndata: <json>\n\n`)
+- `chat_stream_with_images(...)` → `POST /api/sessions/{id}/chat/stream`, relais SSE
+  octet pour octet ; porte aussi `provider`, `model`, `model_options.reasoning.effort` et
+  `system_message` (consigne d'effort)
 
-### `server/src/opencode.rs` *(prévu)*
+### `routes/`
 
-Transport `opencode api` (le CLI officiel injecte lui-même l'authentification), endpoints
-`/api/session`, `/api/session/:id/children`, `/api/session/status`. Repli polling ; SSE
-`/api/event` à confirmer.
-
-### `server/src/routes/`
-
-| Route | Réponse |
+| Route | Rôle |
 |---|---|
 | `GET /api/health` | `{api, db, opencode, apiDetail?}` |
-| `GET /api/observatory/sessions` | `AgentSession[]` |
-| `GET /api/observatory/sessions/:id/messages` | `MessageDelta[]` |
-| `GET /api/observatory/subagents` | `Subagent[]` |
+| `GET /api/observatory/sessions` | sessions |
+| `GET /api/observatory/sessions/:id/messages` | messages (fenêtre par échanges) |
+| `GET /api/observatory/subagents` | délégations |
+| `GET /api/observatory/skills` | catalogue |
 | `POST /api/sessions` | création (relais) |
-| `POST /api/chat/stream` | flux SSE (relais) |
+| `POST /api/chat/stream` | tour via l'API, SSE |
+| `POST /api/cli/stream` | tour via le CLI (`hermes --resume`), SSE |
+| `GET /api/preview/detect` | serveur de dev du projet cité |
+| `GET/POST /api/dictation/*` | état et transcription locale |
 
-### `web/src/`
+## Interface
 
 ```
-App.tsx                        assemblage : sidebar, vue active, rail droit
-lib/api.ts                     polling + parsing SSE + hooks (useSessions, useSubagents…)
-types/api.ts                   contrat partagé (source de vérité des noms de champs)
-components/ascii/              moteur canvas du fond animé (déterministe)
-components/shell/Sidebar.tsx   navigation + liste de sessions
-components/chat/ChatPane.tsx   transcript + composer
-components/agents/*            cartes de sessions, arbre des subagents, filtres d'origine
-components/preview/            cadres d'appareil et aperçu iframe
-styles/theme.css               tokens (couleurs, verre, grille, typographie)
+App.tsx                         assemblage : sidebar, vue active, rail droit
+lib/api.ts                      polling, parsing SSE, hooks (useSessions, useSubagents…)
+lib/base.ts                     base des appels (relative en dev, absolue dans le bundle)
+types/api.ts                    contrat partagé (source de vérité des champs)
+components/ascii/               fond animé (canvas 2D, déterministe)
+components/shell/               sidebar, sélecteur de modèle
+components/chat/                transcript, composer, barre d'effort, menu « / »
+components/agents/              cartes, arbre des sous-agents, avatars
+components/effects/             overlay Ultracode, pastilles d'agents
+components/preview/             cadres d'appareil et iframe
+styles/theme.css                tokens (couleurs, verre, grille, typographie)
 ```
 
 ## Flux d'une conversation
 
 ```
 ChatPane.onSend
-  └─► POST /api/chat/stream            (notre serveur)
-        └─► POST /api/sessions/{id}/chat/stream   (API Hermes)
-              └─► SSE: run.started, message.started, assistant.delta,
-                        tool.started, tool.completed, assistant.completed, run.completed
-  ◄── recopie SSE ─────────────────────────────────────────────────────────────┘
-App.tsx agrège les deltas dans un buffer local, puis s'efface : la base d'état
-fait foi dès que le tour est persisté (polling 1,5 s sur /messages).
+  └─► POST /api/chat/stream                  (notre service)
+        └─► POST /api/sessions/{id}/chat/stream      (API Hermes, sessions api_server)
+            ou hermes -z … --resume …                (CLI, sessions local)
+  ◄── SSE recopié ────────────────────────────────────────────────────────────┘
+App.tsx agrège les deltas, puis s'efface : la base fait foi dès que le tour est écrit.
 ```
+
+## Fenêtre de messages
+
+Sur une grosse session, les dernières lignes sont presque toutes des appels d'outils. La
+requête cale le début de fenêtre sur le **12e dernier message utilisateur** et renvoie tout
+ce qui suit (borné à 800 lignes) : conversation lisible, fin jamais tronquée.
 
 ## Choix assumés
 
-- **Polling plutôt que WebSocket en V0.** 2 s sur la liste des sessions, 1,5 s sur le
-  transcript actif : suffisant, sans état de connexion à maintenir. Le passage au flux
-  d'événements du gateway Hermes (`/api/ws`, tickets à usage unique) est une évolution
-  prévue, pas un prérequis.
-- **Pas de fork de cdesktop en V0.** Le fork Rust/Tauri complet (30 crates) reste une
-  option ; il n'était pas compatible avec l'objectif « voir le visuel tout de suite ».
-- **L'aperçu reste un cadre d'appareil + iframe.** Une webapp responsive se valide là.
-  Les émulateurs natifs (Android, iOS sur macOS) s'ouvrent depuis l'app hôte.
+- **Polling plutôt que WebSocket** : 2 s sur la liste des sessions, 1,5 s sur le transcript
+  actif. Simple, sans état de connexion à maintenir ; le flux d'événements du gateway est
+  une évolution possible, pas un prérequis.
+- **Aperçu = cadre d'appareil + iframe** : une webapp responsive se valide là. Les
+  émulateurs natifs s'ouvrent depuis l'app hôte.
+- **Chemins résolus à l'exécution** : profil utilisateur, `LOCALAPPDATA`, variables
+  `COCKPIT_*`. Aucun chemin personnel dans le code, donc aucun dans le dépôt.
+- **Index HTML en `no-store`**, assets hachés cachable à vie : une mise à jour ne peut pas
+  laisser une webview tourner sur une ancienne feuille de style.
 
 ## Invariants du projet
 
 1. `state.db` est en lecture seule. Toujours.
 2. Aucune clé, aucun token, aucun `.env` dans le dépôt.
-3. Aucune donnée fictive en production : une source absente s'affiche « à venir » ou vide.
-4. Chaque nouvel écran arrive avec son test et sa capture d'écran.
+3. Aucune donnée fictive en production : une source absente s'affiche vide ou explique
+   pourquoi.
+4. Chaque comportement corrigé arrive avec son test.
