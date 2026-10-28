@@ -78,7 +78,7 @@ pub async fn cli_stream(
         .stdout
         .take()
         .ok_or_else(|| ApiError::new(StatusCode::BAD_GATEWAY, "sortie du CLI indisponible"))?;
-    let mut lines = BufReader::new(stdout).lines();
+    let lines = BufReader::new(stdout).lines();
 
     let session_id = body.session_id.clone();
     let stream = stream::unfold((lines, child, false), move |(mut lines, mut child, done)| {
