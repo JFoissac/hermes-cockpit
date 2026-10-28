@@ -29,12 +29,11 @@ jobs:
           - os: windows-latest
             target: ""
             suffix: windows-x64
+          # macOS : un binaire UNIVERSEL (Apple Silicon + Intel) sur un seul
+          # runner. Le runner macos-13 (Intel) reste des heures en file.
           - os: macos-latest
-            target: "aarch64-apple-darwin"
-            suffix: macos-arm64
-          - os: macos-13
-            target: "x86_64-apple-darwin"
-            suffix: macos-x64
+            target: "universal-apple-darwin"
+            suffix: macos-universal
           - os: ubuntu-22.04
             target: ""
             suffix: linux-x64
@@ -53,7 +52,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.target }}
+          targets: ${{ matrix.target == 'universal-apple-darwin' && 'aarch64-apple-darwin,x86_64-apple-darwin' || matrix.target }}
 
       - uses: swatinem/rust-cache@v2
         with:
@@ -82,7 +81,19 @@ jobs:
 
       - name: Construire le service local
         working-directory: server
-        run: cargo build --release ${{ matrix.target != '' && format('--target {0}', matrix.target) || '' }}
+        shell: bash
+        run: |
+          if [ "${{ matrix.target }}" = "universal-apple-darwin" ]; then
+            cargo build --release --target aarch64-apple-darwin
+            cargo build --release --target x86_64-apple-darwin
+            mkdir -p target/universal
+            lipo -create \
+              target/aarch64-apple-darwin/release/hermes-cockpit-server \
+              target/x86_64-apple-darwin/release/hermes-cockpit-server \
+              -output target/universal/hermes-cockpit-server
+          else
+            cargo build --release ${{ matrix.target != '' && format('--target {0}', matrix.target) || '' }}
+          fi
 
       - name: Rassembler les artefacts
         shell: bash
